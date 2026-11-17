@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: Righteous Fury Alerter
+## Notes: Big icon while Righteous Fury is missing. Spell-ID based, so it also works in combat and inside instances.
+## Author: Felippe Burk
+## Version: 3.1
+## X-Flavor: Forever
+## SavedVariables: RFA_DB
+
+RighteousFuryAlerter.lua

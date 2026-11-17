@@ -1,0 +1,54 @@
+# Every push to main and every pull request: parse the Lua, check the TOC
+# matches the source, build the release archive. No secrets, read-only token.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install luaparser
+        run: python -m pip install --upgrade luaparser
+
+      - name: Parse the addon Lua
+        run: |
+          python -c "from luaparser import ast; ast.parse(open(r'RighteousFuryAlerter\\RighteousFuryAlerter.lua', encoding='utf-8').read()); print('parsed OK')"
+
+      - name: Check the TOC
+        shell: pwsh
+        run: |
+          $toc = Get-Content RighteousFuryAlerter\RighteousFuryAlerter.toc -Raw
+          foreach ($field in '## Interface: 16001', '## X-Flavor: Forever', '## SavedVariables: RFA_DB', 'RighteousFuryAlerter.lua') {
+            if ($toc -notmatch [regex]::Escape($field)) { throw "toc is missing: $field" }
+          }
+          Write-Host 'toc OK'
+
+      - name: Build the release archive
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path RighteousFuryAlerter\RighteousFuryAlerter.toc -Pattern '^## Version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          ./build-zip.ps1 -Version $version
+          Get-ChildItem release | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RighteousFuryAlerter
+          path: release/*.zip

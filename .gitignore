@@ -1,0 +1,21 @@
+# Build output
+release/
+*.zip
+
+# Editor / local junk
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+*.bak
+*.orig
+*~
+
+# Python tooling (luaparser checks)
+__pycache__/
+*.pyc
+
+# Never commit game state or private data
+WTF/
+Logs/
+SavedVariables/
