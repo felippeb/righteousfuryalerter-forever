@@ -7,13 +7,18 @@
   during fights and anywhere inside an instance (dungeon, raid, BG).
 
   Why this works in combat: while auras are "secret" (in combat on this
-  client) aura *names* cannot be read, but the client still answers
-  C_UnitAuras.GetUnitAuraBySpellID() for a spell ID. This addon asks for
-  spell 25780 by ID first and only falls back to name/index scanning when
-  that API does not exist.
+  client) aura *names* cannot be read, and a spell ID lookup that is not
+  allowed to answer reports the buff as absent rather than as unknown.
+
+  So the addon never believes a "no" it cannot vouch for: every lookup is
+  asked (a "yes" is always true), but a "no" only counts while the client is
+  unlocked, or after that same lookup already said "yes" during the same
+  fight. On top of that, a successful cast of spell 25780 counts as proof the
+  buff is up, which is what clears the warning when you buff mid-pull.
 
   Slash commands:
-    /rfa         toggle the debug line
+    /rfa         one status line: what each lookup answered, zone, quiet flag
+    /rfa debug   log only when the state changes
     /rfa move    unlock the icon so you can drag it (again to lock)
     /rfa test    flash the icon for 5 seconds
     /rfa reset   put the icon back at screen centre
@@ -259,46 +264,66 @@ end
 
 -- While auras are locked down, "no such aura" can simply mean "you are not
 -- allowed to look" and that is exactly what made name based reminders fire in
--- combat while the buff was up. A positive answer is always trustworthy, so
--- once a locked-down combat has produced one from GetUnitAuraBySpellID we
--- know that call still answers, and only then do we believe a negative one.
-local trustedWhileLocked = false
+-- combat while the buff was up.
+--
+-- Two rules keep that from happening while still noticing a buff you just put
+-- up mid-fight:
+--
+--   * a positive answer is always trustworthy, whichever call produced it, so
+--     every lookup is asked even while locked down;
+--   * a negative answer is only believed if that same lookup already answered
+--     "yes" in this fight, which proves the client still lets it through.
+--
+-- The enumeration based lookups (GetAuraDataByIndex, UnitBuff) report an empty
+-- list while locked down, so their negatives are never believed at all.
+local provenWhileLocked = { unit = false, player = false, util = false }
 
-local probe = { locked = false, unit = nil, player = nil, util = nil, index = nil, legacy = nil, present = nil }
+local probe = {
+  locked = false, unit = nil, player = nil, util = nil, index = nil, legacy = nil,
+  present = nil, proven = false,
+}
 
 local function Probe()
   local locked = Restricted()
   if not locked then
-    trustedWhileLocked = false
+    provenWhileLocked.unit, provenWhileLocked.player, provenWhileLocked.util = false, false, false
   end
 
+  -- Ask everything, every time: positives are free information and skipping a
+  -- lookup in combat is what kept the icon up after casting Righteous Fury.
   local unit   = ByUnitSpellID()
-  local player = locked and nil or ByPlayerSpellID()
-  local util   = locked and nil or ByAuraUtilSpellID()
-  local index  = locked and nil or ByIndex()
-  local legacy = locked and nil or ByLegacyUnitBuff()
+  local player = ByPlayerSpellID()
+  local util   = ByAuraUtilSpellID()
+  local index  = ByIndex()
+  local legacy = ByLegacyUnitBuff()
+
+  if locked then
+    if unit == true then provenWhileLocked.unit = true end
+    if player == true then provenWhileLocked.player = true end
+    if util == true then provenWhileLocked.util = true end
+  end
 
   local present
-  if unit ~= nil then
-    if not locked then
-      present = unit
-    elseif unit == true then
-      trustedWhileLocked = true
-      present = true
-    elseif trustedWhileLocked then
+  if unit == true or player == true or util == true or index == true or legacy == true then
+    present = true
+  elseif not locked then
+    present = unit
+    if present == nil then present = player end
+    if present == nil then present = util end
+    if present == nil then present = index end
+    if present == nil then present = legacy end
+  else
+    if unit == false and provenWhileLocked.unit then
+      present = false
+    elseif player == false and provenWhileLocked.player then
+      present = false
+    elseif util == false and provenWhileLocked.util then
       present = false
     end
-  elseif player ~= nil then
-    present = player
-  elseif util ~= nil then
-    present = util
-  elseif index ~= nil then
-    present = index
-  elseif legacy ~= nil then
-    present = legacy
   end
 
   probe.locked, probe.unit, probe.player = locked, unit, player
+  probe.proven = provenWhileLocked.unit or provenWhileLocked.player or provenWhileLocked.util
   probe.util, probe.index, probe.legacy, probe.present = util, index, legacy, present
 
   -- Just zoned in: hold off on "missing" until the client settled.
@@ -408,19 +433,39 @@ for _, event in ipairs({
   "PLAYER_UNGHOST",
   "UNIT_AURA",
   "UNIT_FLAGS",
+  "UNIT_SPELLCAST_SUCCEEDED",
   "ZONE_CHANGED_NEW_AREA",
 }) do
   events:RegisterEvent(event)
 end
 
-events:SetScript("OnEvent", function(_, event, unit)
+events:SetScript("OnEvent", function(_, event, unit, _, spellID)
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
     -- The aura list is empty for a moment while the zone loads.
     settleUntil = GetTime() + 3
   end
+
   if (event == "UNIT_AURA" or event == "UNIT_FLAGS") and unit and unit ~= "player" then
     return
   end
+
+  -- Casting the buff yourself is the one positive the client cannot hide from
+  -- us while auras are locked down. Without this the icon stayed up for the
+  -- rest of the fight if you buffed mid-pull, because every aura read keeps
+  -- answering "no" until combat ends.
+  if event == "UNIT_SPELLCAST_SUCCEEDED" then
+    if unit and unit ~= "player" then
+      return
+    end
+    local ok, isFury = pcall(function() return spellID == RF_SPELL_ID end)
+    if ok and isFury then
+      -- The client just told us "absent" while we know it is now "present", so
+      -- stop believing negative answers for the rest of this fight.
+      provenWhileLocked.unit, provenWhileLocked.player, provenWhileLocked.util = false, false, false
+      lastKnownPresent = true
+    end
+  end
+
   Refresh()
 end)
 
@@ -473,7 +518,7 @@ local function PrintStatus()
     Describe(probe.util),
     Describe(probe.index),
     Describe(probe.legacy),
-    tostring(trustedWhileLocked),
+    tostring(probe.proven),
     lastKnownPresent and "present" or "missing",
     tostring(GetRealZoneText and GetRealZoneText() or "?"),
     tostring(SuppressedOutOfCombat())))

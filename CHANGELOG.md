@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.3 — 2026-11-18
+
+- Fixed: buffing Righteous Fury **during** combat left the icon and the sound
+  running until the fight ended. Two changes:
+  - every presence lookup is now asked even while the client is locked down,
+    and a "yes" from any of them clears the warning (before, only
+    `GetUnitAuraBySpellID` was consulted, and only its "yes" was used);
+  - a successful cast of spell `25780` now counts as proof the buff is up, which
+    is the only positive signal the client cannot hide while auras are secret.
+- A "no" is still only believed while unlocked, or after that same lookup
+  already answered "yes" during the same fight, so the old false alarm cannot
+  come back.
+- `/rfa` prints `proven` instead of `trusted`.
+
 ## 3.2 — 2026-11-17
 
 - Credit where it is due: the original addon is **Righteous Fury Remember** by

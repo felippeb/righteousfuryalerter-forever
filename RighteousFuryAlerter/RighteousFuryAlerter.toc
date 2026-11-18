@@ -3,7 +3,7 @@
 ## Notes: Big icon while Righteous Fury is missing. Spell-ID based, so it also works in combat and inside instances.
 ## Author: Felippe Burk
 ## X-Original-Author: mddmz (Righteous Fury Remember, CurseForge 1801419)
-## Version: 3.2
+## Version: 3.3
 ## X-Flavor: Forever
 ## SavedVariables: RFA_DB
 

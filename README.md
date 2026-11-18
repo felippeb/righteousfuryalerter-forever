@@ -88,11 +88,16 @@ See [CREDITS.md](CREDITS.md) for the full lineage.
 - Presence is read by spell ID, with `GetPlayerAuraBySpellID`,
   `GetUnitAuraBySpellID` and `AuraUtil.FindAuraBySpellId` as fallbacks.
 - Every read is wrapped so a restricted/secret answer becomes *unknown*.
+- Every lookup is asked on every check: a "yes" is always true, whichever call
+  produced it.
 - While the client is locked down (`InCombatLockdown()` or
   `C_Secrets.ShouldAurasBeSecret()`), a "not there" answer is only believed for
   the rest of that fight if the same call already answered "there is" earlier in
   it. Otherwise the last known state is kept, which is what prevents the false
   alarm.
+- Casting spell `25780` yourself counts as proof the buff is up, so buffing
+  mid-pull clears the icon and the sound immediately instead of waiting for the
+  fight to end.
 - After a zone or instance change the aura list is briefly empty, so "missing"
   results are ignored for 3 seconds.
 
