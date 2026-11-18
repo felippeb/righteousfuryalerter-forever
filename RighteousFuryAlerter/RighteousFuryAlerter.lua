@@ -19,6 +19,12 @@
     /rfa reset   put the icon back at screen centre
     /rfa sound   toggle the sound alert
 
+  Original addon: "Righteous Fury Remember" by mddmz
+  (https://www.curseforge.com/wow/addons/righteousfuryremember, project 1801419),
+  which installed as the RighteousFuryAlerter folder. This is a rewrite: same
+  idea and same folder name, spell-ID based presence instead of name matching.
+  MIT licensed, 2026 Felippe Burk. See CREDITS.md and LICENSE.
+
 ---------------------------------------------------------------------------- ]]
 
 local RF_SPELL_ID = 25780

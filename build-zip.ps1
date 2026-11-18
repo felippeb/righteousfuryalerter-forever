@@ -13,22 +13,29 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Version = "3.1",
+    [string]$Version,
     [string]$OutDir
 )
 
 $ErrorActionPreference = "Stop"
 
 # $PSScriptRoot is not reliable inside a param() default block on Windows
-# PowerShell 5.1, so the output directory is resolved here instead.
-if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot "release" }
+# PowerShell 5.1, so the paths are resolved here instead.
+$root = $PSScriptRoot
+if (-not $OutDir) { $OutDir = Join-Path $root "release" }
+
+# The TOC is the single source of truth for the version.
+if (-not $Version) {
+    $tocPath = Join-Path $root "RighteousFuryAlerter\RighteousFuryAlerter.toc"
+    $Version = (Select-String -Path $tocPath -Pattern '^## Version:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+    if (-not $Version) { throw "could not read ## Version from $tocPath" }
+}
 
 # PowerShell's location and the process working directory are not the same
 # thing, and the .NET compression APIs use the latter. Resolve once, absolutely,
 # so a relative -OutDir behaves the same from any shell and from CI.
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
 
-$root = $PSScriptRoot
 $folder = "RighteousFuryAlerter"
 
 if (-not (Test-Path (Join-Path $root $folder))) {

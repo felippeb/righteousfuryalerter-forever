@@ -7,12 +7,17 @@ interface `16001`).
 No dependencies, no libraries, no WeakAuras/ForeverAuras needed. One addon
 folder, one Lua file.
 
+An unofficial rewrite of [Righteous Fury
+Remember](https://www.curseforge.com/wow/addons/righteousfuryremember) by
+**mddmz** (CurseForge project `1801419`), which the addon folder name
+`RighteousFuryAlerter` comes from. See [CREDITS.md](CREDITS.md).
+
 ## Why this exists
 
-Every "remind me when Righteous Fury drops" aura I tried had the same bug: it
-popped up **in combat while the buff was up**. On Forever the client hides aura
-*names* in combat (secret values), so a name-based check reads "no such aura"
-and happily reports the buff as missing.
+Every "remind me when Righteous Fury drops" aura and addon I tried had the same
+bug: it popped up **in combat while the buff was up**. On Forever the client
+hides aura *names* in combat (secret values), so a name-based check reads "no
+such aura" and happily reports the buff as missing.
 
 This addon asks for the buff **by spell ID** instead
 (`C_UnitAuras.GetUnitAuraBySpellID("player", 25780)`), which the client still
@@ -45,12 +50,38 @@ warning sound every 5 seconds.
 
 ## Install
 
+**WowUp-CF (recommended, auto-updates when a release is published)**
+
+Addons → *Install from URL* → paste:
+
+```
+https://github.com/felippeb/righteousfuryalerter-forever
+```
+
+WowUp installs the latest release zip and keeps it updated. Restart the client
+after the first install so the new `.toc` is read.
+
+**Manual**
+
 1. Copy the `RighteousFuryAlerter` folder into
    `World of Warcraft\_forever_\Interface\AddOns\`.
 2. Restart the client (new `.toc` metadata is only read at launch).
 3. Enable **Righteous Fury Alerter** in the AddOns list at character select.
 
-Or grab a zip from the releases page and unpack it into `Interface\AddOns`.
+Or grab a zip from the [releases page](../../releases/latest) and unpack it into
+`Interface\AddOns`.
+
+## Credits
+
+- Original addon: **Righteous Fury Remember** by **mddmz** —
+  <https://www.curseforge.com/wow/addons/righteousfuryremember>. It shipped as
+  the `RighteousFuryAlerter` folder, which is why this addon keeps that name.
+- This version is a rewrite by Felippe Burk: same idea (giant icon + raid
+  warning sound every 5 seconds), but the presence check moved from aura
+  *names* to aura *spell IDs* so it stops lying in combat, and it gained the
+  instance/out-of-combat gate.
+
+See [CREDITS.md](CREDITS.md) for the full lineage.
 
 ## How it stays honest in combat
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.2 — 2026-11-17
+
+- Credit where it is due: the original addon is **Righteous Fury Remember** by
+  **mddmz** (CurseForge `1801419`), which shipped as the `RighteousFuryAlerter`
+  folder. Added `CREDITS.md` and noted the lineage in the README, the TOC and
+  the Lua header.
+- README install section now covers installing straight from the GitHub URL in
+  WowUp-CF.
+- No behaviour changes.
+
 ## 3.1 — 2026-11-17
 
 - The warning stays quiet in the open world while out of combat. It now only
